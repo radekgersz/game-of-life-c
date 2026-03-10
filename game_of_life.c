@@ -7,10 +7,11 @@ int WINDOW_WIDTH = 1000;
 int GRID_HEIGHT = 200;
 int GRID_WIDTH = 200;
 
-int readInput(char filename[], int* grid){
+int readInput(char filename[], int* grid, int* activeCells){
     FILE *fptr;
     fptr = fopen(filename, "r");
     int row, col;
+    int i = 0;
     if (fptr) {
         while (fscanf(fptr, "%d %d", &row, &col) == 2) {
         if (row >= GRID_HEIGHT || col >= GRID_WIDTH){
@@ -18,6 +19,7 @@ int readInput(char filename[], int* grid){
             return 1;
         }
         grid[row*GRID_WIDTH + col] = 1;
+        activeCells[i] = row*GRID_WIDTH + col;
     }
     fclose(fptr);
     }
@@ -26,16 +28,19 @@ int readInput(char filename[], int* grid){
 
 
 int main(int argc, char** argv) {
-    if (argc != 4){
-        printf("Usage: ./game <filename> <num_steps> <graphics_on>\n");
+    if (argc != 5){
+        printf("Usage: ./game <filename> <initial_cells> <num_steps> <graphics_on>\n");
         return -1;
-    }    
-    int* grid = calloc(GRID_HEIGHT*GRID_WIDTH,sizeof(int));
-    if (!grid) return 1;
+    }   
     char *filename = argv[1];
-    // const size_t nSteps = strtoul(argv[2], NULL, 10);
+    const size_t nSteps = strtoul(argv[3], NULL, 10); 
+    const size_t initCells = atoi(argv[2]);
+    int* grid = calloc(GRID_HEIGHT*GRID_WIDTH,sizeof(int));
+    int* activeCells = malloc(initCells * sizeof(int));
+    if (!grid) return 1;
+
     const int graphicsOn = atoi(argv[3]);
-    if (readInput(filename, grid) != 0){
+    if (readInput(filename, grid, activeCells) != 0){
         printf("failed to read input\n");
         return 1;
 
