@@ -37,7 +37,7 @@ int writeOutput(){
 
 void computeNextGeneration(uint8_t* grid, uint8_t* nextGrid){
 
-    // #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(static)
     for (int y = 1; y <= GRID_HEIGHT; y++) {
         for (int x = 1; x <= GRID_WIDTH; x++) {
             
@@ -78,8 +78,6 @@ void drawSimulation(uint8_t* grid, SDL_Renderer *renderer){
             }
         }
     }
-    
-    // 2. REQUIRED: Tell SDL to push the drawn pixels to the screen
     SDL_RenderPresent(renderer); 
 }
 uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps, const  int graphicsOn, SDL_Renderer *renderer){
@@ -96,7 +94,7 @@ uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps
         computeNextGeneration(grid, nextGrid);
         if (graphicsOn == 1){
             drawSimulation(grid,renderer);
-            SDL_Delay(2);
+            SDL_Delay(20);
         }
         uint8_t* temp = grid;
         grid = nextGrid;      
