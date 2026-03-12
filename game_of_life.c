@@ -1,11 +1,14 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "graphics.h"
 
 int WINDOW_HEIGHT = 1000;
 int WINDOW_WIDTH = 1000;
 int GRID_HEIGHT = 200;
 int GRID_WIDTH = 200;
+
+
 
 int readInput(char filename[], int* grid, int* activeCells){
     FILE *fptr;
@@ -26,24 +29,33 @@ int readInput(char filename[], int* grid, int* activeCells){
     return 0;
 }
 
+void performSimulation(){
+
+}
 
 int main(int argc, char** argv) {
     if (argc != 5){
         printf("Usage: ./game <filename> <initial_cells> <num_steps> <graphics_on>\n");
         return -1;
     }   
+    //parse initial arguments
     char *filename = argv[1];
     const size_t nSteps = strtoul(argv[3], NULL, 10); 
     const size_t initCells = atoi(argv[2]);
-    int* grid = calloc(GRID_HEIGHT*GRID_WIDTH,sizeof(int));
-    int* activeCells = malloc(initCells * sizeof(int));
-    if (!grid) return 1;
+    const int graphicsOn = atoi(argv[4]);
 
-    const int graphicsOn = atoi(argv[3]);
+
+    //initializing the arrays
+    int MAX_CELLS = GRID_HEIGHT * GRID_WIDTH;
+    int* liveCells = malloc(MAX_CELLS * sizeof(int));
+    int* nextLiveCells = malloc(MAX_CELLS * sizeof(int));
+    int* grid = calloc(MAX_CELLS, sizeof(int));
+    int* nextGrid = calloc(MAX_CELLS, sizeof(int));
+
+    //graphics initialization
     if (readInput(filename, grid, activeCells) != 0){
         printf("failed to read input\n");
         return 1;
-
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -64,6 +76,7 @@ int main(int argc, char** argv) {
         SDL_Quit();
         return 1;
     }
+
     SDL_Renderer *renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
         printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
@@ -76,10 +89,11 @@ int main(int argc, char** argv) {
     int cellWidth = WINDOW_WIDTH / GRID_WIDTH;
     int cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
 
+
+    performSimulation();
+
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
-
-
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
     for (int row = 0; row < GRID_HEIGHT; row++) {
@@ -95,6 +109,8 @@ int main(int argc, char** argv) {
             }
         }
     }
+
+    //end the simulation
     SDL_RenderPresent(renderer);
     SDL_Delay(2000);
     SDL_DestroyWindow(win);
@@ -102,3 +118,4 @@ int main(int argc, char** argv) {
     free(grid);
     return 0;
 }
+
