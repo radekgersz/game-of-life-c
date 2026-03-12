@@ -10,6 +10,8 @@ int WINDOW_WIDTH = 1000;
 int GRID_HEIGHT = 200;
 int GRID_WIDTH = 200;
 int PADDING;
+int cellWidth;
+int cellHeight;
 
 
 
@@ -23,7 +25,7 @@ int readInput(char filename[], uint8_t* grid){
             printf("invalid cells positioning \n");
             return 1;
         }
-        grid[row*GRID_WIDTH + col] = 1;
+        grid[(row + 1) * PADDING + (col + 1)] = 1;
     }
     fclose(fptr);
     }
@@ -36,34 +38,71 @@ int writeOutput(){
 void computeNextGeneration(uint8_t* grid, uint8_t* nextGrid){
 
     // #pragma omp parallel for schedule(static)
-    for (int y = 1; y <= WINDOW_HEIGHT; y++) {
-        for (int x = 1; x <= WINDOW_WIDTH; x++) {
+    for (int y = 1; y <= GRID_HEIGHT; y++) {
+        for (int x = 1; x <= GRID_WIDTH; x++) {
             
             // 1D index calculation
             int i = y * PADDING + x;
             
             // 1. Count neighbors (Memory is accessed sequentially where possible)
-            uint8_t sum = grid[i - PADDING - 1] + grid[i - PADDING] + grid[i - PADDING + 1] +
+            uint8_t neighbours = grid[i - PADDING - 1] + grid[i - PADDING] + grid[i - PADDING + 1] +
                           grid[i - 1] + grid[i + 1] +
                           grid[i + PADDING - 1] + grid[i + PADDING] + grid[i + PADDING + 1];
             
-            // 2. Branchless State Update
-            nextGrid[i] = (sum == 3) | (grid[i] & (sum == 2));
+            //Applying conway's rules
+            nextGrid[i] = (neighbours == 3) | (grid[i] & (neighbours == 2));
         }
     }
 }
 
-void drawSimulation(){
+void drawSimulation(uint8_t* grid, SDL_Renderer *renderer){
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
+    // 1. Iterate over the playable area (ignoring the invisible halo)
+    for (int y = 1; y <= GRID_HEIGHT; y++) {
+        for (int x = 1; x <= GRID_WIDTH; x++) {
+            
+            // Use the exact same 1D index calculation as your compute function!
+            int i = y * PADDING + x;
+            
+            if (grid[i] == 1) {
+                SDL_Rect cell;
+                // Subtract 1 so the top-left cell draws at screen coordinate (0,0)
+                cell.x = (x - 1) * cellWidth; 
+                cell.y = (y - 1) * cellHeight;
+                cell.w = cellWidth > 0 ? cellWidth : 1;
+                cell.h = cellHeight > 0 ? cellHeight : 1;
+                SDL_RenderFillRect(renderer, &cell);
+            }
+        }
+    }
+    
+    // 2. REQUIRED: Tell SDL to push the drawn pixels to the screen
+    SDL_RenderPresent(renderer); 
 }
-
-void performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps, const  int graphicsOn){
+uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps, const  int graphicsOn, SDL_Renderer *renderer){
     for (size_t i = 0; i < nSteps; i++){
+        if (graphicsOn == 1) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT) {
+                    return; 
+                }
+            }
+        }
+
         computeNextGeneration(grid, nextGrid);
         if (graphicsOn == 1){
-            drawSimulation();
+            drawSimulation(grid,renderer);
+            SDL_Delay(2);
         }
+        uint8_t* temp = grid;
+        grid = nextGrid;      
+        nextGrid = temp;
     }
+    return grid;
 }
 
 int main(int argc, char** argv) {
@@ -80,8 +119,8 @@ int main(int argc, char** argv) {
 
     uint8_t* grid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     uint8_t* nextGrid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
-    int cellWidth = WINDOW_WIDTH / GRID_WIDTH;
-    int cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
+    cellWidth = WINDOW_WIDTH / GRID_WIDTH;
+    cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
 
     //input reading
     if (readInput(filename, grid) != 0){
@@ -117,36 +156,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // performSimulation(grid, nextGrid, nSteps, graphicsOn);
-
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-    for (int row = 0; row < GRID_HEIGHT; row++) {
-        for (int col = 0; col < GRID_WIDTH; col++) {
-            
-            if (grid[row * GRID_WIDTH + col] == 1) {
-                SDL_Rect cell;
-                cell.x = col * cellWidth;
-                cell.y = row * cellHeight;
-                cell.w = cellWidth > 0 ? cellWidth : 1;
-                cell.h = cellHeight > 0 ? cellHeight : 1;
-                SDL_RenderFillRect(renderer, &cell);
-            }
-        }
-    }
+    performSimulation(grid, nextGrid, nSteps, graphicsOn,renderer);
 
     //writing output
     writeOutput();
 
 
-    //end the simulation and free resources
-    SDL_RenderPresent(renderer);
-    SDL_Delay(2000);
     SDL_DestroyWindow(win);
     SDL_Quit();
     free(grid);
+    free(nextGrid);
     return 0;
 }
 
