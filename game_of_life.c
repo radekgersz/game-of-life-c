@@ -7,11 +7,18 @@
 
 int WINDOW_HEIGHT = 1000;
 int WINDOW_WIDTH = 1000;
-int GRID_HEIGHT = 200;
-int GRID_WIDTH = 200;
+int GRID_HEIGHT = 250;
+int GRID_WIDTH = 250;
 int PADDING;
 int cellWidth;
 int cellHeight;
+
+typedef struct 
+{
+    SDL_Renderer *renderer;
+    SDL_Window *win;
+} GraphicsData;
+
 
 
 
@@ -94,13 +101,43 @@ uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps
         computeNextGeneration(grid, nextGrid);
         if (graphicsOn == 1){
             drawSimulation(grid,renderer);
-            SDL_Delay(20);
+            SDL_Delay(1);
         }
         uint8_t* temp = grid;
         grid = nextGrid;      
         nextGrid = temp;
     }
     return grid;
+}
+
+int initializeGraphics(GraphicsData* graphicsData){
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    printf("SDL_Init Error: %s\n", SDL_GetError());
+    return 1;
+    }
+
+    graphicsData->win = SDL_CreateWindow(
+        "Window",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        WINDOW_HEIGHT, WINDOW_WIDTH,
+        SDL_WINDOW_SHOWN
+    );
+
+    if (!graphicsData->win) {
+        printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    graphicsData->renderer = SDL_CreateRenderer(graphicsData->win, -1, SDL_RENDERER_ACCELERATED);
+    if (!graphicsData->renderer) {
+        printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
+        SDL_DestroyWindow(graphicsData->win);
+        SDL_Quit();
+        return 1;
+    }
+    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -117,6 +154,7 @@ int main(int argc, char** argv) {
 
     uint8_t* grid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     uint8_t* nextGrid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
+    GraphicsData* graphicsData = malloc(sizeof(GraphicsData));
     cellWidth = WINDOW_WIDTH / GRID_WIDTH;
     cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
 
@@ -125,43 +163,24 @@ int main(int argc, char** argv) {
         printf("failed to read input\n");
         return 1;
     }
+    if (graphicsOn == 1){
+        if (initializeGraphics(graphicsData) != 0){
+            free(grid);
+            free(nextGrid);
+            return 1;
+        }
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        printf("SDL_Init Error: %s\n", SDL_GetError());
-        return 1;
+        
     }
-
-    SDL_Window *win = SDL_CreateWindow(
-        "Test",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        WINDOW_HEIGHT, WINDOW_WIDTH,
-        SDL_WINDOW_SHOWN
-    );
-
-    if (!win) {
-        printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        free(grid);
-        return 1;
-    }
-
-    performSimulation(grid, nextGrid, nSteps, graphicsOn,renderer);
+    performSimulation(grid, nextGrid, nSteps, graphicsOn,graphicsData->renderer);
 
     //writing output
     writeOutput();
 
-
-    SDL_DestroyWindow(win);
-    SDL_Quit();
+    if (graphicsOn == 1){
+        SDL_DestroyWindow(graphicsData->win);
+        SDL_Quit();
+    }
     free(grid);
     free(nextGrid);
     return 0;
