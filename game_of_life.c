@@ -1,20 +1,22 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <omp.h>
 #include "graphics.h"
 
 int WINDOW_HEIGHT = 1000;
 int WINDOW_WIDTH = 1000;
 int GRID_HEIGHT = 200;
 int GRID_WIDTH = 200;
+int PADDING;
 
 
 
-int readInput(char filename[], int* grid, int* activeCells){
+int readInput(char filename[], uint8_t* grid){
     FILE *fptr;
     fptr = fopen(filename, "r");
     int row, col;
-    int i = 0;
     if (fptr) {
         while (fscanf(fptr, "%d %d", &row, &col) == 2) {
         if (row >= GRID_HEIGHT || col >= GRID_WIDTH){
@@ -22,17 +24,50 @@ int readInput(char filename[], int* grid, int* activeCells){
             return 1;
         }
         grid[row*GRID_WIDTH + col] = 1;
-        activeCells[i] = row*GRID_WIDTH + col;
     }
     fclose(fptr);
     }
     return 0;
 }
+int writeOutput(){
+    return 0;
+}
 
-// void performSimulation(int* liveCells, int* nextLiveCells, int* grid, int* nextGrid, int nSteps, int graphicsOn){
-// }
+void computeNextGeneration(uint8_t* grid, uint8_t* nextGrid){
+
+    // #pragma omp parallel for schedule(static)
+    for (int y = 1; y <= WINDOW_HEIGHT; y++) {
+        for (int x = 1; x <= WINDOW_WIDTH; x++) {
+            
+            // 1D index calculation
+            int i = y * PADDING + x;
+            
+            // 1. Count neighbors (Memory is accessed sequentially where possible)
+            uint8_t sum = grid[i - PADDING - 1] + grid[i - PADDING] + grid[i - PADDING + 1] +
+                          grid[i - 1] + grid[i + 1] +
+                          grid[i + PADDING - 1] + grid[i + PADDING] + grid[i + PADDING + 1];
+            
+            // 2. Branchless State Update
+            nextGrid[i] = (sum == 3) | (grid[i] & (sum == 2));
+        }
+    }
+}
+
+void drawSimulation(){
+
+}
+
+void performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps, const  int graphicsOn){
+    for (size_t i = 0; i < nSteps; i++){
+        computeNextGeneration(grid, nextGrid);
+        if (graphicsOn == 1){
+            drawSimulation();
+        }
+    }
+}
 
 int main(int argc, char** argv) {
+    PADDING = GRID_WIDTH + 2;
     if (argc != 4){
         printf("Usage: ./game <filename> <num_steps> <graphics_on>\n");
         return -1;
@@ -43,17 +78,13 @@ int main(int argc, char** argv) {
     const int graphicsOn = atoi(argv[3]);
 
 
-    //initializing the arrays
-    int MAX_CELLS = GRID_HEIGHT * GRID_WIDTH;
-    int* liveCells = malloc(MAX_CELLS * sizeof(int));
-    int* nextLiveCells = malloc(MAX_CELLS * sizeof(int));
-    int* grid = calloc(MAX_CELLS, sizeof(int));
-    int* nextGrid = calloc(MAX_CELLS, sizeof(int));
+    uint8_t* grid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
+    uint8_t* nextGrid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     int cellWidth = WINDOW_WIDTH / GRID_WIDTH;
     int cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
 
-    //graphics initialization
-    if (readInput(filename, grid, liveCells) != 0){
+    //input reading
+    if (readInput(filename, grid) != 0){
         printf("failed to read input\n");
         return 1;
     }
@@ -86,7 +117,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // performSimulation(liveCells, nextLiveCells, grid, nextGrid, nSteps, graphicsOn);
+    // performSimulation(grid, nextGrid, nSteps, graphicsOn);
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
@@ -106,7 +137,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    //end the simulation
+    //writing output
+    writeOutput();
+
+
+    //end the simulation and free resources
     SDL_RenderPresent(renderer);
     SDL_Delay(2000);
     SDL_DestroyWindow(win);
