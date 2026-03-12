@@ -29,20 +29,18 @@ int readInput(char filename[], int* grid, int* activeCells){
     return 0;
 }
 
-void performSimulation(){
-
-}
+// void performSimulation(int* liveCells, int* nextLiveCells, int* grid, int* nextGrid, int nSteps, int graphicsOn){
+// }
 
 int main(int argc, char** argv) {
-    if (argc != 5){
-        printf("Usage: ./game <filename> <initial_cells> <num_steps> <graphics_on>\n");
+    if (argc != 4){
+        printf("Usage: ./game <filename> <num_steps> <graphics_on>\n");
         return -1;
     }   
     //parse initial arguments
     char *filename = argv[1];
-    const size_t nSteps = strtoul(argv[3], NULL, 10); 
-    const size_t initCells = atoi(argv[2]);
-    const int graphicsOn = atoi(argv[4]);
+    const size_t nSteps = strtoul(argv[2], NULL, 10); 
+    const int graphicsOn = atoi(argv[3]);
 
 
     //initializing the arrays
@@ -51,9 +49,11 @@ int main(int argc, char** argv) {
     int* nextLiveCells = malloc(MAX_CELLS * sizeof(int));
     int* grid = calloc(MAX_CELLS, sizeof(int));
     int* nextGrid = calloc(MAX_CELLS, sizeof(int));
+    int cellWidth = WINDOW_WIDTH / GRID_WIDTH;
+    int cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
 
     //graphics initialization
-    if (readInput(filename, grid, activeCells) != 0){
+    if (readInput(filename, grid, liveCells) != 0){
         printf("failed to read input\n");
         return 1;
     }
@@ -86,11 +86,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    int cellWidth = WINDOW_WIDTH / GRID_WIDTH;
-    int cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
-
-
-    performSimulation();
+    // performSimulation(liveCells, nextLiveCells, grid, nextGrid, nSteps, graphicsOn);
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
