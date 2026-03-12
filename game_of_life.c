@@ -12,6 +12,7 @@ int GRID_WIDTH = 250;
 int PADDING;
 int cellWidth;
 int cellHeight;
+int delay;
 
 typedef struct 
 {
@@ -101,7 +102,7 @@ uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps
         computeNextGeneration(grid, nextGrid);
         if (graphicsOn == 1){
             drawSimulation(grid,renderer);
-            SDL_Delay(1);
+            SDL_Delay(delay);
         }
         uint8_t* temp = grid;
         grid = nextGrid;      
@@ -142,16 +143,15 @@ int initializeGraphics(GraphicsData* graphicsData){
 
 int main(int argc, char** argv) {
     PADDING = GRID_WIDTH + 2;
-    if (argc != 4){
-        printf("Usage: ./game <filename> <num_steps> <graphics_on>\n");
+    if (argc != 5){
+        printf("Usage: ./game <filename> <num_steps> <graphics_on> <delay>\n");
         return -1;
     }   
     //parse initial arguments
     char *filename = argv[1];
     const size_t nSteps = strtoul(argv[2], NULL, 10); 
     const int graphicsOn = atoi(argv[3]);
-
-
+    delay = atoi(argv[4]);
     uint8_t* grid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     uint8_t* nextGrid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     GraphicsData* graphicsData = malloc(sizeof(GraphicsData));
