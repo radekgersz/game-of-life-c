@@ -93,7 +93,7 @@ uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT) {
-                    return; 
+                    return NULL; 
                 }
             }
         }
@@ -169,8 +169,6 @@ int main(int argc, char** argv) {
             free(nextGrid);
             return 1;
         }
-
-        
     }
     performSimulation(grid, nextGrid, nSteps, graphicsOn,graphicsData->renderer);
 
