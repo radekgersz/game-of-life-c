@@ -1,5 +1,5 @@
-CFLAGS  += -Wall -Wextra $(shell sdl2-config --cflags)
-LDFLAGS += $(shell sdl2-config --libs)
+CFLAGS  += -Wall -Wextra -O3 -fopenmp -ffast-math -march=native $(shell sdl2-config --cflags)
+LDFLAGS += -fopenmp $(shell sdl2-config --libs)
 
 game: game_of_life.o
 	gcc game_of_life.o -o game $(LDFLAGS)
