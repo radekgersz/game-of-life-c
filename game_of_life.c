@@ -5,14 +5,13 @@
 #include <omp.h>
 #include "graphics.h"
 
-int WINDOW_HEIGHT = 1000;
-int WINDOW_WIDTH = 1000;
-int GRID_HEIGHT = 250;
-int GRID_WIDTH = 250;
-int PADDING;
+#define WINDOW_HEIGHT 1000
+#define WINDOW_WIDTH 1000
+#define GRID_HEIGHT 2000
+#define GRID_WIDTH 2000
+#define PADDING (GRID_WIDTH + 2)
 int cellWidth;
 int cellHeight;
-int delay;
 
 typedef struct 
 {
@@ -42,7 +41,7 @@ int readInput(char filename[], uint8_t* grid){
 int writeOutput(){
     return 0;
 }
-
+// __attribute__((hot))
 void computeNextGeneration(uint8_t* grid, uint8_t* nextGrid){
 
     #pragma omp parallel for schedule(static)
@@ -78,10 +77,10 @@ void drawSimulation(uint8_t* grid, SDL_Renderer *renderer){
             if (grid[i] == 1) {
                 SDL_Rect cell;
                 // Subtract 1 so the top-left cell draws at screen coordinate (0,0)
-                cell.x = (x - 1) * cellWidth; 
-                cell.y = (y - 1) * cellHeight;
-                cell.w = cellWidth > 0 ? cellWidth : 1;
-                cell.h = cellHeight > 0 ? cellHeight : 1;
+                cell.x = x - 1; 
+                cell.y = y - 1;
+                cell.w = 1;
+                cell.h = 1;
                 SDL_RenderFillRect(renderer, &cell);
             }
         }
@@ -102,7 +101,7 @@ uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps
         computeNextGeneration(grid, nextGrid);
         if (graphicsOn == 1){
             drawSimulation(grid,renderer);
-            SDL_Delay(delay);
+            SDL_Delay(20);
         }
         uint8_t* temp = grid;
         grid = nextGrid;      
@@ -138,20 +137,20 @@ int initializeGraphics(GraphicsData* graphicsData){
         SDL_Quit();
         return 1;
     }
+
+    SDL_RenderSetLogicalSize(graphicsData->renderer, GRID_WIDTH, GRID_HEIGHT);
     return 0;
 }
 
 int main(int argc, char** argv) {
-    PADDING = GRID_WIDTH + 2;
-    if (argc != 5){
-        printf("Usage: ./game <filename> <num_steps> <graphics_on> <delay>\n");
+    if (argc != 4){
+        printf("Usage: ./game <filename> <num_steps> <graphics_on>\n");
         return -1;
     }   
     //parse initial arguments
     char *filename = argv[1];
     const size_t nSteps = strtoul(argv[2], NULL, 10); 
     const int graphicsOn = atoi(argv[3]);
-    delay = atoi(argv[4]);
     uint8_t* grid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     uint8_t* nextGrid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
     GraphicsData* graphicsData = malloc(sizeof(GraphicsData));
