@@ -7,9 +7,8 @@
 
 #define WINDOW_HEIGHT 1000
 #define WINDOW_WIDTH 1000
-#define GRID_HEIGHT 2000
-#define GRID_WIDTH 2000
-#define PADDING (GRID_WIDTH + 2)
+int padding;
+int gridSize;
 int cellWidth;
 int cellHeight;
 
@@ -28,11 +27,11 @@ int readInput(char filename[], uint8_t* grid){
     int row, col;
     if (fptr) {
         while (fscanf(fptr, "%d %d", &row, &col) == 2) {
-        if (row >= GRID_HEIGHT || col >= GRID_WIDTH){
+        if (row >= gridSize || col >= gridSize){
             printf("invalid cells positioning \n");
             return 1;
         }
-        grid[(row + 1) * PADDING + (col + 1)] = 1;
+        grid[(row + 1) * padding + (col + 1)] = 1;
     }
     fclose(fptr);
     }
@@ -41,22 +40,19 @@ int readInput(char filename[], uint8_t* grid){
 int writeOutput(){
     return 0;
 }
-// __attribute__((hot))
+__attribute__((hot))
 void computeNextGeneration(uint8_t* grid, uint8_t* nextGrid){
 
     #pragma omp parallel for schedule(static)
-    for (int y = 1; y <= GRID_HEIGHT; y++) {
-        for (int x = 1; x <= GRID_WIDTH; x++) {
+    for (int y = 1; y <= gridSize; y++) {
+        for (int x = 1; x <= gridSize; x++) {
             
-            // 1D index calculation
-            int i = y * PADDING + x;
+            int i = y * padding + x;
             
-            // 1. Count neighbors (Memory is accessed sequentially where possible)
-            uint8_t neighbours = grid[i - PADDING - 1] + grid[i - PADDING] + grid[i - PADDING + 1] +
+            uint8_t neighbours = grid[i - padding - 1] + grid[i - padding] + grid[i - padding + 1] +
                           grid[i - 1] + grid[i + 1] +
-                          grid[i + PADDING - 1] + grid[i + PADDING] + grid[i + PADDING + 1];
+                          grid[i + padding - 1] + grid[i + padding] + grid[i + padding + 1];
             
-            //Applying conway's rules
             nextGrid[i] = (neighbours == 3) | (grid[i] & (neighbours == 2));
         }
     }
@@ -68,11 +64,11 @@ void drawSimulation(uint8_t* grid, SDL_Renderer *renderer){
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
     // 1. Iterate over the playable area (ignoring the invisible halo)
-    for (int y = 1; y <= GRID_HEIGHT; y++) {
-        for (int x = 1; x <= GRID_WIDTH; x++) {
+    for (int y = 1; y <= gridSize; y++) {
+        for (int x = 1; x <= gridSize; x++) {
             
             // Use the exact same 1D index calculation as your compute function!
-            int i = y * PADDING + x;
+            int i = y * padding + x;
             
             if (grid[i] == 1) {
                 SDL_Rect cell;
@@ -138,30 +134,32 @@ int initializeGraphics(GraphicsData* graphicsData){
         return 1;
     }
 
-    SDL_RenderSetLogicalSize(graphicsData->renderer, GRID_WIDTH, GRID_HEIGHT);
+    SDL_RenderSetLogicalSize(graphicsData->renderer, gridSize, gridSize);
     return 0;
 }
 
 int main(int argc, char** argv) {
-    if (argc != 4){
-        printf("Usage: ./game <filename> <num_steps> <graphics_on>\n");
+    if (argc != 5){
+        printf("Usage: ./game <filename> <grid_size> <num_steps> <graphics_on>\n");
         return -1;
     }   
     //parse initial arguments
     char *filename = argv[1];
-    const size_t nSteps = strtoul(argv[2], NULL, 10); 
-    const int graphicsOn = atoi(argv[3]);
-    uint8_t* grid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
-    uint8_t* nextGrid = calloc(PADDING * (GRID_HEIGHT + 2), sizeof(uint8_t));
+    gridSize = atoi(argv[2]);
+    padding = gridSize + 2;
+    const size_t nSteps = strtoul(argv[3], NULL, 10); 
+    const int graphicsOn = atoi(argv[4]);
+    uint8_t* grid = calloc(padding * (gridSize + 2), sizeof(uint8_t));
+    uint8_t* nextGrid = calloc(padding * (gridSize + 2), sizeof(uint8_t));
     GraphicsData* graphicsData = malloc(sizeof(GraphicsData));
-    cellWidth = WINDOW_WIDTH / GRID_WIDTH;
-    cellHeight = WINDOW_HEIGHT / GRID_HEIGHT;
-
+    cellWidth = WINDOW_WIDTH / gridSize;
+    cellHeight = WINDOW_HEIGHT / gridSize;
     //input reading
     if (readInput(filename, grid) != 0){
         printf("failed to read input\n");
         return 1;
     }
+
     if (graphicsOn == 1){
         if (initializeGraphics(graphicsData) != 0){
             free(grid);
