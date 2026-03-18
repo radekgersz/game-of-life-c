@@ -40,6 +40,7 @@ inline void computeNextGeneration(uint8_t* restrict grid, uint8_t* restrict next
 
     #pragma omp parallel for schedule(static)
     for (int y = 1; y <= gridSize; y++) {
+        #pragma omp simd
         for (int x = 1; x <= gridSize; x++) {
             
             int i = y * padding + x;
@@ -58,16 +59,14 @@ void drawSimulation(uint8_t* grid, SDL_Renderer *renderer){
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-    // 1. Iterate over the playable area (ignoring the invisible halo)
     for (int y = 1; y <= gridSize; y++) {
         for (int x = 1; x <= gridSize; x++) {
             
-            // Use the exact same 1D index calculation as your compute function!
+            
             int i = y * padding + x;
             
             if (grid[i] == 1) {
                 SDL_Rect cell;
-                // Subtract 1 so the top-left cell draws at screen coordinate (0,0)
                 cell.x = x - 1; 
                 cell.y = y - 1;
                 cell.w = 1;
@@ -135,7 +134,7 @@ int initializeGraphics(GraphicsData* graphicsData){
 int main(int argc, char** argv) {
     if (argc != 5){
         printf("Usage: ./game <filename> <grid_size> <num_steps> <graphics_on>\n");
-        return -1;
+        return 1;
     }   
     //parse initial arguments
     char *filename = argv[1];
