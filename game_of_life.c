@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <omp.h>
-#include "graphics.h"
 
 #define WINDOW_HEIGHT 1000
 #define WINDOW_WIDTH 1000
@@ -19,8 +18,6 @@ typedef struct
 } GraphicsData;
 
 
-
-
 int readInput(char filename[], uint8_t* grid){
     FILE *fptr;
     fptr = fopen(filename, "r");
@@ -29,6 +26,7 @@ int readInput(char filename[], uint8_t* grid){
         while (fscanf(fptr, "%d %d", &row, &col) == 2) {
         if (row >= gridSize || col >= gridSize){
             printf("invalid cells positioning \n");
+            fclose(fptr);
             return 1;
         }
         grid[(row + 1) * padding + (col + 1)] = 1;
@@ -37,11 +35,8 @@ int readInput(char filename[], uint8_t* grid){
     }
     return 0;
 }
-int writeOutput(){
-    return 0;
-}
 __attribute__((hot))
-void computeNextGeneration(uint8_t* grid, uint8_t* nextGrid){
+inline void computeNextGeneration(uint8_t* restrict grid, uint8_t* restrict nextGrid){
 
     #pragma omp parallel for schedule(static)
     for (int y = 1; y <= gridSize; y++) {
@@ -93,7 +88,6 @@ uint8_t* performSimulation(uint8_t* grid, uint8_t* nextGrid, const size_t nSteps
                 }
             }
         }
-
         computeNextGeneration(grid, nextGrid);
         if (graphicsOn == 1){
             drawSimulation(grid,renderer);
@@ -154,6 +148,7 @@ int main(int argc, char** argv) {
     GraphicsData* graphicsData = malloc(sizeof(GraphicsData));
     cellWidth = WINDOW_WIDTH / gridSize;
     cellHeight = WINDOW_HEIGHT / gridSize;
+
     //input reading
     if (readInput(filename, grid) != 0){
         printf("failed to read input\n");
@@ -164,20 +159,23 @@ int main(int argc, char** argv) {
         if (initializeGraphics(graphicsData) != 0){
             free(grid);
             free(nextGrid);
+            free(graphicsData);
             return 1;
         }
     }
-    performSimulation(grid, nextGrid, nSteps, graphicsOn,graphicsData->renderer);
 
-    //writing output
-    writeOutput();
+    //entire simulation function
+    performSimulation(grid, nextGrid, nSteps, graphicsOn,graphicsData->renderer);
 
     if (graphicsOn == 1){
         SDL_DestroyWindow(graphicsData->win);
         SDL_Quit();
     }
+
+    //release the memory
     free(grid);
     free(nextGrid);
+    free(graphicsData);
     return 0;
 }
 
